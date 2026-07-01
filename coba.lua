@@ -1,6 +1,7 @@
 --[[
-    SCRIPT DISTRIK KEKERASAN - PC & HP Compatible
+    SCRIPT DISTRIK KEKERASAN - UI SUPERIOR VERSION
     Support untuk Delta Executor (PC & Android)
+    Dengan UI yang lebih bagus, animasi, dan fitur lengkap!
 --]]
 
 -- ============================================
@@ -31,35 +32,19 @@ local CONFIG = {
 -- ============================================
 -- DETEKSI PLATFORM
 -- ============================================
-local isMobile = false
-local isPC = false
-
--- Deteksi apakah pengguna menggunakan mobile
-local function detectPlatform()
-    local UserInputService = game:GetService("UserInputService")
-    if UserInputService.TouchEnabled then
-        isMobile = true
-        isPC = false
-        print("📱 Mode HP Terdeteksi!")
-    else
-        isMobile = false
-        isPC = true
-        print("💻 Mode PC Terdeteksi!")
-    end
-end
+local UserInputService = game:GetService("UserInputService")
+local isMobile = UserInputService.TouchEnabled
+local isPC = not isMobile
 
 -- ============================================
 -- VARIABEL GLOBAL
 -- ============================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local StarterGui = game:GetService("StarterGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
@@ -69,278 +54,580 @@ local isGameRunning = true
 local generators = {}
 local killer = nil
 local guiCreated = false
+local screenGui = nil
 
 -- ============================================
--- FUNGSI GUI UNTUK HP
+-- FUNGSI ANIMASI
 -- ============================================
-local function createMobileGUI()
+local function tweenObject(obj, properties, duration)
+    local tween = TweenService:Create(obj, TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties)
+    tween:Play()
+    return tween
+end
+
+local function createPulseEffect(obj)
+    spawn(function()
+        while obj and obj.Parent do
+            tweenObject(obj, {BackgroundTransparency = 0.1}, 0.5)
+            task.wait(0.5)
+            tweenObject(obj, {BackgroundTransparency = 0.3}, 0.5)
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- ============================================
+-- UI SUPERIOR UNTUK HP & PC
+-- ============================================
+local function createSuperiorUI()
     if guiCreated then return end
-    if not isMobile then return end
     
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "DistrikGUI"
+    -- ScreenGui utama dengan efek blur
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DistrikUI_Superior"
     screenGui.Parent = player.PlayerGui
     screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Background tombol
-    local function createButton(text, position, size, color, action)
+    -- Background gelap transparan untuk efek glassmorphism
+    local function createGlassmorphism(parent, size, position, transparency)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(0, size or 60, 0, 60)
-        frame.Position = UDim2.new(position.X or 0.8, 0, position.Y or 0.5, 0)
-        frame.BackgroundColor3 = color or Color3.fromRGB(255, 0, 0)
-        frame.BackgroundTransparency = 0.3
-        frame.BorderSizePixel = 2
+        frame.Size = size
+        frame.Position = position
+        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+        frame.BackgroundTransparency = transparency or 0.7
+        frame.BorderSizePixel = 1
         frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-        frame.Parent = screenGui
+        frame.BorderSizePixel = 0
+        frame.Parent = parent
         
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 30)
+        corner.CornerRadius = UDim.new(0, 15)
         corner.Parent = frame
         
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = text
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.TextScaled = true
-        label.Font = Enum.Font.GothamBold
-        label.Parent = frame
-        
-        -- Touch event untuk HP
-        local function onTouch()
-            if action then action() end
-            -- Efek klik
-            frame.BackgroundTransparency = 0
-            task.wait(0.1)
-            frame.BackgroundTransparency = 0.3
-        end
-        
-        frame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                onTouch()
-            end
-        end)
+        -- Efek glassmorphism (stroke)
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 1
+        stroke.Transparency = 0.5
+        stroke.Parent = frame
         
         return frame
     end
     
-    if isKiller then
-        -- Tombol untuk pembunuh (HP)
-        createButton("⚡T", {X = 0.7, Y = 0.3}, 60, Color3.fromRGB(200, 0, 0), function()
-            if isKiller then
-                local nearest = getNearestSurvivor()
-                if nearest and nearest.Character then
-                    local dist = (character.HumanoidRootPart.Position - nearest.Character.HumanoidRootPart.Position).Magnitude
-                    if dist <= CONFIG.Pembunuh.TeleportRange then
-                        character.HumanoidRootPart.CFrame = nearest.Character.HumanoidRootPart.CFrame + Vector3.new(0, 2, 0)
-                        createEffect(character.HumanoidRootPart.Position, "Bright violet")
-                    end
-                end
-            end
-        end)
-        
-        createButton("👻Q", {X = 0.8, Y = 0.3}, 60, Color3.fromRGB(100, 0, 200), function()
-            if isKiller then
-                toggleInvisible()
-            end
-        end)
-        
-        createButton("💨E", {X = 0.7, Y = 0.45}, 60, Color3.fromRGB(0, 200, 255), function()
-            if isKiller then
-                speedBoost()
-            end
-        end)
-        
-        createButton("👥F", {X = 0.8, Y = 0.45}, 60, Color3.fromRGB(0, 200, 0), function()
-            if isKiller then
-                createClones()
-            end
-        end)
-        
-        -- Tombol kill untuk HP
-        local killBtn = createButton("🔪", {X = 0.85, Y = 0.7}, 80, Color3.fromRGB(255, 0, 0), function()
-            if isKiller then
-                local target, dist = getNearestSurvivor()
-                if target and target.Character and dist <= CONFIG.Pembunuh.KillRange then
-                    target.Character.Humanoid.Health = 0
-                    createEffect(target.Character.HumanoidRootPart.Position, "Really red")
-                    print("💀 " .. target.Name .. " terbunuh!")
-                end
-            end
-        end)
-        
-        -- Tombol long kill untuk HP
-        createButton("💀", {X = 0.75, Y = 0.7}, 80, Color3.fromRGB(150, 0, 0), function()
-            if isKiller then
-                local target, dist = getNearestSurvivor()
-                if target and target.Character and dist <= CONFIG.Pembunuh.LongKillRange then
-                    target.Character.Humanoid.Health = 0
-                    createEffect(target.Character.HumanoidRootPart.Position, "Really red")
-                    print("💀💀 " .. target.Name .. " terbunuh (long range)!")
-                end
-            end
-        end)
-        
-    else
-        -- Tombol untuk survivor (HP)
-        createButton("💨Q", {X = 0.7, Y = 0.3}, 60, Color3.fromRGB(0, 200, 255), function()
-            if not isKiller then
-                local direction = character.HumanoidRootPart.CFrame.LookVector * CONFIG.Survivor.DashDistance
-                character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame + direction
-                createEffect(character.HumanoidRootPart.Position, "Bright cyan")
-            end
-        end)
-        
-        createButton("🛡️E", {X = 0.8, Y = 0.3}, 60, Color3.fromRGB(0, 100, 255), function()
-            if not isKiller then
-                createShield()
-            end
-        end)
-        
-        -- Tombol repair untuk HP
-        createButton("🔧", {X = 0.7, Y = 0.7}, 80, Color3.fromRGB(0, 255, 0), function()
-            if not isKiller then
-                repairGenerator()
-            end
-        end)
-    end
+    -- ============================================
+    -- 1. ROLE INDICATOR (Atas)
+    -- ============================================
+    local roleFrame = createGlassmorphism(screenGui, UDim2.new(0, 250, 0, 50), UDim2.new(0.5, -125, 0.02, 0), 0.6)
     
-    -- Informasi role
-    local roleFrame = Instance.new("Frame")
-    roleFrame.Size = UDim2.new(0, 200, 0, 40)
-    roleFrame.Position = UDim2.new(0.5, -100, 0.05, 0)
-    roleFrame.BackgroundColor3 = isKiller and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
-    roleFrame.BackgroundTransparency = 0.2
-    roleFrame.BorderSizePixel = 2
-    roleFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    roleFrame.Parent = screenGui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = roleFrame
+    local roleIcon = Instance.new("TextLabel")
+    roleIcon.Size = UDim2.new(0, 40, 1, 0)
+    roleIcon.BackgroundTransparency = 1
+    roleIcon.Text = isKiller and "🔪" or "🏃"
+    roleIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    roleIcon.TextScaled = true
+    roleIcon.Font = Enum.Font.GothamBold
+    roleIcon.Parent = roleFrame
     
     local roleLabel = Instance.new("TextLabel")
-    roleLabel.Size = UDim2.new(1, 0, 1, 0)
+    roleLabel.Size = UDim2.new(1, -45, 1, 0)
+    roleLabel.Position = UDim2.new(0, 45, 0, 0)
     roleLabel.BackgroundTransparency = 1
-    roleLabel.Text = isKiller and "🔪 PEMBUNUH" or "🏃 SURVIVOR"
-    roleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    roleLabel.Text = isKiller and "PEMBUNUH" or "SURVIVOR"
+    roleLabel.TextColor3 = isKiller and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50, 255, 50)
     roleLabel.TextScaled = true
     roleLabel.Font = Enum.Font.GothamBold
+    roleLabel.TextXAlignment = Enum.TextXAlignment.Left
     roleLabel.Parent = roleFrame
     
-    -- Info generator
-    local genFrame = Instance.new("Frame")
-    genFrame.Size = UDim2.new(0, 200, 0, 30)
-    genFrame.Position = UDim2.new(0.5, -100, 0.12, 0)
-    genFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    genFrame.BackgroundTransparency = 0.5
-    genFrame.BorderSizePixel = 0
-    genFrame.Parent = screenGui
+    -- Animasi pulse role
+    createPulseEffect(roleFrame)
+    
+    -- ============================================
+    -- 2. GENERATOR COUNTER (Atas)
+    -- ============================================
+    local genFrame = createGlassmorphism(screenGui, UDim2.new(0, 250, 0, 40), UDim2.new(0.5, -125, 0.09, 0), 0.6)
+    
+    local genIcon = Instance.new("TextLabel")
+    genIcon.Size = UDim2.new(0, 30, 1, 0)
+    genIcon.BackgroundTransparency = 1
+    genIcon.Text = "⚡"
+    genIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    genIcon.TextScaled = true
+    genIcon.Font = Enum.Font.GothamBold
+    genIcon.Parent = genFrame
     
     local genLabel = Instance.new("TextLabel")
-    genLabel.Size = UDim2.new(1, 0, 1, 0)
+    genLabel.Size = UDim2.new(1, -35, 1, 0)
+    genLabel.Position = UDim2.new(0, 35, 0, 0)
     genLabel.BackgroundTransparency = 1
-    genLabel.Text = "Generator: 0/" .. #generators
+    genLabel.Text = "Generator: 0/7"
     genLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     genLabel.TextScaled = true
     genLabel.Font = Enum.Font.Gotham
+    genLabel.TextXAlignment = Enum.TextXAlignment.Left
     genLabel.Parent = genFrame
+    genLabel.Name = "GenLabel"
     
-    -- Update generator info
-    spawn(function()
-        while isGameRunning do
-            local fixed = 0
-            for _, g in pairs(generators) do
-                if g.IsFixed then fixed = fixed + 1 end
-            end
-            genLabel.Text = "Generator: " .. fixed .. "/" .. #generators
-            task.wait(0.5)
+    -- ============================================
+    -- 3. STATUS INDICATOR (Kiri Atas)
+    -- ============================================
+    local statusFrame = createGlassmorphism(screenGui, UDim2.new(0, 200, 0, 100), UDim2.new(0.01, 10, 0.15, 0), 0.5)
+    statusFrame.Visible = false
+    statusFrame.Name = "StatusFrame"
+    
+    local statusTitle = Instance.new("TextLabel")
+    statusTitle.Size = UDim2.new(1, 0, 0, 25)
+    statusTitle.BackgroundTransparency = 1
+    statusTitle.Text = "📊 STATUS"
+    statusTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    statusTitle.TextScaled = true
+    statusTitle.Font = Enum.Font.GothamBold
+    statusTitle.Parent = statusFrame
+    
+    local statusList = Instance.new("TextLabel")
+    statusList.Size = UDim2.new(1, 0, 1, -30)
+    statusList.Position = UDim2.new(0, 0, 0, 30)
+    statusList.BackgroundTransparency = 1
+    statusList.Text = "● Inactive"
+    statusList.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusList.TextScaled = true
+    statusList.Font = Enum.Font.Gotham
+    statusList.TextXAlignment = Enum.TextXAlignment.Left
+    statusList.Parent = statusFrame
+    statusList.Name = "StatusList"
+    
+    -- ============================================
+    -- 4. KILL COUNTER (Kanan Atas)
+    -- ============================================
+    if isKiller then
+        local killFrame = createGlassmorphism(screenGui, UDim2.new(0, 150, 0, 50), UDim2.new(1, -160, 0.02, 0), 0.6)
+        
+        local killIcon = Instance.new("TextLabel")
+        killIcon.Size = UDim2.new(0, 30, 1, 0)
+        killIcon.BackgroundTransparency = 1
+        killIcon.Text = "💀"
+        killIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+        killIcon.TextScaled = true
+        killIcon.Font = Enum.Font.GothamBold
+        killIcon.Parent = killFrame
+        
+        local killLabel = Instance.new("TextLabel")
+        killLabel.Size = UDim2.new(1, -35, 1, 0)
+        killLabel.Position = UDim2.new(0, 35, 0, 0)
+        killLabel.BackgroundTransparency = 1
+        killLabel.Text = "0 Kill"
+        killLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        killLabel.TextScaled = true
+        killLabel.Font = Enum.Font.GothamBold
+        killLabel.TextXAlignment = Enum.TextXAlignment.Left
+        killLabel.Parent = killFrame
+        killLabel.Name = "KillLabel"
+        
+        -- Streak indicator
+        local streakFrame = createGlassmorphism(screenGui, UDim2.new(0, 150, 0, 40), UDim2.new(1, -160, 0.09, 0), 0.6)
+        streakFrame.Visible = false
+        streakFrame.Name = "StreakFrame"
+        
+        local streakLabel = Instance.new("TextLabel")
+        streakLabel.Size = UDim2.new(1, 0, 1, 0)
+        streakLabel.BackgroundTransparency = 1
+        streakLabel.Text = "🔥 0x Streak"
+        streakLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+        streakLabel.TextScaled = true
+        streakLabel.Font = Enum.Font.GothamBold
+        streakLabel.Parent = streakFrame
+        streakLabel.Name = "StreakLabel"
+    end
+    
+    -- ============================================
+    -- 5. ABILITY COOLDOWN INDICATOR (Bawah)
+    -- ============================================
+    local cooldownFrame = createGlassmorphism(screenGui, UDim2.new(0, 300, 0, 60), UDim2.new(0.5, -150, 1, -70), 0.5)
+    cooldownFrame.Name = "CooldownFrame"
+    
+    -- Progress bar cooldown
+    local cooldownBar = Instance.new("Frame")
+    cooldownBar.Size = UDim2.new(1, -20, 0, 20)
+    cooldownBar.Position = UDim2.new(0, 10, 0.15, 0)
+    cooldownBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    cooldownBar.BorderSizePixel = 0
+    cooldownBar.Parent = cooldownFrame
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = cooldownBar
+    
+    local cooldownFill = Instance.new("Frame")
+    cooldownFill.Size = UDim2.new(0, 0, 1, 0)
+    cooldownFill.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+    cooldownFill.BorderSizePixel = 0
+    cooldownFill.Parent = cooldownBar
+    
+    local corner2 = Instance.new("UICorner")
+    corner2.CornerRadius = UDim.new(0, 10)
+    corner2.Parent = cooldownFill
+    
+    local cooldownLabel = Instance.new("TextLabel")
+    cooldownLabel.Size = UDim2.new(1, 0, 1, 0)
+    cooldownLabel.BackgroundTransparency = 1
+    cooldownLabel.Text = "⚡ Ability Ready"
+    cooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cooldownLabel.TextScaled = true
+    cooldownLabel.Font = Enum.Font.Gotham
+    cooldownLabel.Parent = cooldownFrame
+    
+    -- ============================================
+    -- 6. MINIMAP (Kiri Bawah)
+    -- ============================================
+    local minimap = createGlassmorphism(screenGui, UDim2.new(0, 120, 0, 120), UDim2.new(0.01, 10, 1, -140), 0.5)
+    minimap.Name = "Minimap"
+    
+    local minimapTitle = Instance.new("TextLabel")
+    minimapTitle.Size = UDim2.new(1, 0, 0, 20)
+    minimapTitle.BackgroundTransparency = 1
+    minimapTitle.Text = "🗺️ MAP"
+    minimapTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimapTitle.TextScaled = true
+    minimapTitle.Font = Enum.Font.GothamBold
+    minimapTitle.Parent = minimap
+    
+    local mapFrame = Instance.new("Frame")
+    mapFrame.Size = UDim2.new(1, -10, 1, -30)
+    mapFrame.Position = UDim2.new(0, 5, 0, 25)
+    mapFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mapFrame.BackgroundTransparency = 0.3
+    mapFrame.BorderSizePixel = 0
+    mapFrame.Parent = minimap
+    mapFrame.Name = "MapFrame"
+    
+    -- ============================================
+    -- 7. NOTIFICATION CENTER (Tengah)
+    -- ============================================
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Size = UDim2.new(0, 400, 0, 60)
+    notifFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
+    notifFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    notifFrame.BackgroundTransparency = 0.8
+    notifFrame.BorderSizePixel = 2
+    notifFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+    notifFrame.Visible = false
+    notifFrame.Parent = screenGui
+    notifFrame.Name = "NotificationFrame"
+    
+    local corner3 = Instance.new("UICorner")
+    corner3.CornerRadius = UDim.new(0, 20)
+    corner3.Parent = notifFrame
+    
+    local notifLabel = Instance.new("TextLabel")
+    notifLabel.Size = UDim2.new(1, 0, 1, 0)
+    notifLabel.BackgroundTransparency = 1
+    notifLabel.Text = "🔥 TRIPLE KILL!"
+    notifLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    notifLabel.TextScaled = true
+    notifLabel.Font = Enum.Font.GothamBold
+    notifLabel.Parent = notifFrame
+    
+    -- ============================================
+    -- 8. HP & SHIELD BAR (Bawah Tengah)
+    -- ============================================
+    local hpFrame = createGlassmorphism(screenGui, UDim2.new(0, 300, 0, 30), UDim2.new(0.5, -150, 1, -140), 0.5)
+    hpFrame.Name = "HPFrame"
+    
+    local hpBar = Instance.new("Frame")
+    hpBar.Size = UDim2.new(1, -10, 0, 20)
+    hpBar.Position = UDim2.new(0, 5, 0.15, 0)
+    hpBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    hpBar.BorderSizePixel = 0
+    hpBar.Parent = hpFrame
+    
+    local corner4 = Instance.new("UICorner")
+    corner4.CornerRadius = UDim.new(0, 10)
+    corner4.Parent = hpBar
+    
+    local hpFill = Instance.new("Frame")
+    hpFill.Size = UDim2.new(1, 0, 1, 0)
+    hpFill.BackgroundColor3 = Color3.fromRGB(0, 255, 50)
+    hpFill.BorderSizePixel = 0
+    hpFill.Parent = hpBar
+    hpFill.Name = "HPFill"
+    
+    local corner5 = Instance.new("UICorner")
+    corner5.CornerRadius = UDim.new(0, 10)
+    corner5.Parent = hpFill
+    
+    local hpLabel = Instance.new("TextLabel")
+    hpLabel.Size = UDim2.new(1, 0, 1, 0)
+    hpLabel.BackgroundTransparency = 1
+    hpLabel.Text = "HP: 100/100"
+    hpLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hpLabel.TextScaled = true
+    hpLabel.Font = Enum.Font.Gotham
+    hpLabel.Parent = hpFrame
+    hpLabel.Name = "HPLabel"
+    
+    -- ============================================
+    -- 9. BUTTONS UNTUK HP (Mobile)
+    -- ============================================
+    if isMobile then
+        local buttonPositions = {
+            -- Baris 1 (Atas)
+            {text = "⚡T", pos = UDim2.new(0.7, 0, 0.3, 0), color = Color3.fromRGB(200, 0, 0), action = "teleport"},
+            {text = "👻Q", pos = UDim2.new(0.82, 0, 0.3, 0), color = Color3.fromRGB(150, 0, 200), action = "invisible"},
+            -- Baris 2
+            {text = "💨E", pos = UDim2.new(0.7, 0, 0.45, 0), color = Color3.fromRGB(0, 200, 255), action = "speed"},
+            {text = "👥F", pos = UDim2.new(0.82, 0, 0.45, 0), color = Color3.fromRGB(0, 200, 0), action = "clone"},
+            -- Baris 3 (Kill)
+            {text = "🔪", pos = UDim2.new(0.85, 0, 0.65, 0), color = Color3.fromRGB(255, 0, 0), action = "kill", size = 80},
+            {text = "💀", pos = UDim2.new(0.72, 0, 0.65, 0), color = Color3.fromRGB(180, 0, 0), action = "longkill", size = 70},
+        }
+        
+        if not isKiller then
+            buttonPositions = {
+                {text = "💨Q", pos = UDim2.new(0.7, 0, 0.3, 0), color = Color3.fromRGB(0, 200, 255), action = "dash"},
+                {text = "🛡️E", pos = UDim2.new(0.82, 0, 0.3, 0), color = Color3.fromRGB(0, 100, 255), action = "shield"},
+                {text = "🔧", pos = UDim2.new(0.78, 0, 0.6, 0), color = Color3.fromRGB(0, 255, 0), action = "repair", size = 90},
+            }
         end
-    end)
-    
-    guiCreated = true
-    print("📱 GUI Mobile dibuat!")
-end
-
--- ============================================
--- FUNGSI EFEK
--- ============================================
-local function createEffect(position, color)
-    local part = Instance.new("Part")
-    part.Size = Vector3.new(5, 5, 5)
-    part.Position = position
-    part.Anchored = true
-    part.CanCollide = false
-    part.Material = Enum.Material.Neon
-    part.BrickColor = BrickColor.new(color or "Bright red")
-    part.Transparency = 0.5
-    part.Parent = workspace
-    Debris:AddItem(part, 0.5)
-end
-
--- ============================================
--- FUNGSI KILLER
--- ============================================
-local isInvisible = false
-local isSpeedBoost = false
-
-local function getNearestSurvivor()
-    local nearest = nil
-    local minDist = math.huge
-    
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            local dist = (character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-            if dist < minDist then
-                minDist = dist
-                nearest = p
+        
+        for _, btnData in ipairs(buttonPositions) do
+            local btn = Instance.new("Frame")
+            local size = btnData.size or 65
+            btn.Size = UDim2.new(0, size, 0, size)
+            btn.Position = btnData.pos
+            btn.BackgroundColor3 = btnData.color
+            btn.BackgroundTransparency = 0.2
+            btn.BorderSizePixel = 2
+            btn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Parent = screenGui
+            
+            local corner6 = Instance.new("UICorner")
+            corner6.CornerRadius = UDim.new(0, size/2)
+            corner6.Parent = btn
+            
+            -- Efek glow
+            local glow = Instance.new("Frame")
+            glow.Size = UDim2.new(1.2, 0, 1.2, 0)
+            glow.Position = UDim2.new(-0.1, 0, -0.1, 0)
+            glow.BackgroundColor3 = btnData.color
+            glow.BackgroundTransparency = 0.8
+            glow.BorderSizePixel = 0
+            glow.Parent = btn
+            
+            local corner7 = Instance.new("UICorner")
+            corner7.CornerRadius = UDim.new(0, size/2 + 5)
+            corner7.Parent = glow
+            
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.BackgroundTransparency = 1
+            label.Text = btnData.text
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextScaled = true
+            label.Font = Enum.Font.GothamBold
+            label.Parent = btn
+            
+            -- Touch event
+            btn.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch then
+                    tweenObject(btn, {BackgroundTransparency = 0}, 0.1)
+                    task.wait(0.1)
+                    tweenObject(btn, {BackgroundTransparency = 0.2}, 0.1)
+                    
+                    -- Execute action
+                    if btnData.action == "teleport" then teleportToSurvivor() end
+                    if btnData.action == "invisible" then toggleInvisible() end
+                    if btnData.action == "speed" then speedBoost() end
+                    if btnData.action == "clone" then createClones() end
+                    if btnData.action == "kill" then killSurvivor() end
+                    if btnData.action == "longkill" then longKillSurvivor() end
+                    if btnData.action == "dash" then dashSurvivor() end
+                    if btnData.action == "shield" then createShield() end
+                    if btnData.action == "repair" then repairGenerator() end
+                end
+            end)
+            
+            -- Animasi pulse untuk kill button
+            if btnData.action == "kill" or btnData.action == "longkill" then
+                createPulseEffect(btn)
             end
         end
     end
     
-    return nearest, minDist
+    -- ============================================
+    -- 10. CROSSHAIR (Tengah)
+    -- ============================================
+    local crosshair = Instance.new("Frame")
+    crosshair.Size = UDim2.new(0, 20, 0, 20)
+    crosshair.Position = UDim2.new(0.5, -10, 0.5, -10)
+    crosshair.BackgroundTransparency = 1
+    crosshair.Parent = screenGui
+    
+    -- Garis horizontal
+    local hLine = Instance.new("Frame")
+    hLine.Size = UDim2.new(0, 20, 0, 2)
+    hLine.Position = UDim2.new(0, 0, 0.5, -1)
+    hLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hLine.BackgroundTransparency = 0.5
+    hLine.Parent = crosshair
+    
+    -- Garis vertikal
+    local vLine = Instance.new("Frame")
+    vLine.Size = UDim2.new(0, 2, 0, 20)
+    vLine.Position = UDim2.new(0.5, -1, 0, 0)
+    vLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    vLine.BackgroundTransparency = 0.5
+    vLine.Parent = crosshair
+    
+    -- Dot tengah
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 4, 0, 4)
+    dot.Position = UDim2.new(0.5, -2, 0.5, -2)
+    dot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    dot.BorderSizePixel = 0
+    dot.Parent = crosshair
+    
+    local corner8 = Instance.new("UICorner")
+    corner8.CornerRadius = UDim.new(0, 2)
+    corner8.Parent = dot
+    
+    guiCreated = true
+    print("✅ UI Superior berhasil dibuat!")
+    
+    return screenGui
 end
 
-local function toggleInvisible()
-    if isInvisible then return end
-    isInvisible = true
+-- ============================================
+-- UPDATE FUNGSI UNTUK UI
+-- ============================================
+
+-- Update HP Bar
+local function updateHP()
+    if not screenGui then return end
+    local hpFrame = screenGui:FindFirstChild("HPFrame")
+    if not hpFrame then return end
     
+    local hpFill = hpFrame:FindFirstChild("HPFill")
+    local hpLabel = hpFrame:FindFirstChild("HPLabel")
+    
+    if character and humanoid then
+        local hp = humanoid.Health
+        local maxHp = humanoid.MaxHealth
+        local percent = hp / maxHp
+        
+        hpFill.Size = UDim2.new(percent, 0, 1, 0)
+        hpFill.BackgroundColor3 = percent > 0.5 and Color3.fromRGB(0, 255, 50) or percent > 0.25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 0, 0)
+        hpLabel.Text = "HP: " .. math.floor(hp) .. "/" .. maxHp
+    end
+end
+
+-- Update Generator Counter
+local function updateGeneratorCounter()
+    if not screenGui then return end
+    local genFrame = screenGui:FindFirstChild("GenLabel")
+    if not genFrame then return end
+    
+    local fixed = 0
+    for _, g in pairs(generators) do
+        if g.IsFixed then fixed = fixed + 1 end
+    end
+    genFrame.Text = "Generator: " .. fixed .. "/" .. #generators
+end
+
+-- Update Kill Counter
+local killCount = 0
+local killStreak = 0
+local function updateKillCounter()
+    if not screenGui or not isKiller then return end
+    local killLabel = screenGui:FindFirstChild("KillLabel")
+    if killLabel then
+        killLabel.Text = killCount .. " Kill"
+    end
+    
+    local streakFrame = screenGui:FindFirstChild("StreakFrame")
+    if streakFrame then
+        if killStreak >= 2 then
+            streakFrame.Visible = true
+            local streakLabel = streakFrame:FindFirstChild("StreakLabel")
+            if streakLabel then
+                local emoji = killStreak >= 10 and "💀" or killStreak >= 5 and "⚡" or "🔥"
+                streakLabel.Text = emoji .. " " .. killStreak .. "x Streak"
+            end
+        else
+            streakFrame.Visible = false
+        end
+    end
+end
+
+-- Show Notification (Big)
+local function showBigNotification(title, subtitle, duration)
+    if not screenGui then return end
+    local notifFrame = screenGui:FindFirstChild("NotificationFrame")
+    if not notifFrame then return end
+    
+    local notifLabel = notifFrame:FindFirstChild("TextLabel")
+    if notifLabel then
+        notifLabel.Text = title
+    end
+    
+    notifFrame.Visible = true
+    tweenObject(notifFrame, {BackgroundTransparency = 0.2}, 0.3)
+    task.wait(duration or 2)
+    tweenObject(notifFrame, {BackgroundTransparency = 0.8}, 0.3)
+    task.wait(0.3)
+    notifFrame.Visible = false
+end
+
+-- ============================================
+-- FUNGSI GAME (UPDATE)
+-- ============================================
+
+-- Teleport
+local function teleportToSurvivor()
+    if not isKiller then return end
+    local nearest, dist = getNearestSurvivor()
+    if nearest and nearest.Character and dist <= CONFIG.Pembunuh.TeleportRange then
+        character.HumanoidRootPart.CFrame = nearest.Character.HumanoidRootPart.CFrame + Vector3.new(0, 2, 0)
+        createEffect(character.HumanoidRootPart.Position, "Bright violet")
+        showBigNotification("⚡ TELEPORT!", "Menuju " .. nearest.Name, 1)
+    end
+end
+
+-- Invisible
+local function toggleInvisible()
+    if not isKiller then return end
     for _, part in pairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 1
         end
     end
-    
+    showBigNotification("👻 INVISIBLE!", "Kamu tidak terlihat!", 1)
     task.wait(CONFIG.Pembunuh.InvisibleDuration)
-    
     for _, part in pairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 0
         end
     end
-    
-    isInvisible = false
 end
 
+-- Speed Boost
 local function speedBoost()
-    if isSpeedBoost then return end
-    isSpeedBoost = true
-    
+    if not isKiller then return end
     local originalSpeed = humanoid.WalkSpeed
     humanoid.WalkSpeed = humanoid.WalkSpeed * CONFIG.Pembunuh.SpeedBoostMultiplier
-    
+    showBigNotification("💨 SPEED BOOST!", "Lari lebih cepat!", 1)
     task.wait(5)
     humanoid.WalkSpeed = originalSpeed
-    isSpeedBoost = false
 end
 
+-- Create Clones
 local function createClones()
+    if not isKiller then return end
     for i = 1, CONFIG.Pembunuh.CloneAmount do
         local clone = character:Clone()
         clone.Name = "Clone_" .. player.Name .. "_" .. i
         clone.Parent = workspace
         clone.Humanoid.WalkSpeed = 10
-        
         spawn(function()
             while clone.Parent ~= nil do
                 local target, _ = getNearestSurvivor()
@@ -350,15 +637,61 @@ local function createClones()
                 task.wait(2)
             end
         end)
-        
         Debris:AddItem(clone, 10)
+    end
+    showBigNotification("👥 CLONES!", "3 clone diciptakan!", 1)
+end
+
+-- Kill Survivor
+local function killSurvivor()
+    if not isKiller then return end
+    local target, dist = getNearestSurvivor()
+    if target and target.Character and dist <= CONFIG.Pembunuh.KillRange then
+        target.Character.Humanoid.Health = 0
+        createEffect(target.Character.HumanoidRootPart.Position, "Really red")
+        killCount = killCount + 1
+        killStreak = killStreak + 1
+        updateKillCounter()
+        
+        -- Streak notification
+        if killStreak >= 10 then
+            showBigNotification("💀 UNSTOPPABLE!", killStreak .. " Kill Streak!", 2)
+        elseif killStreak >= 5 then
+            showBigNotification("⚡ PENTA KILL!", killStreak .. " Kill Streak!", 2)
+        elseif killStreak >= 3 then
+            showBigNotification("🔥 TRIPLE KILL!", killStreak .. " Kill Streak!", 2)
+        else
+            showBigNotification("💀 KILL!", target.Name .. " terbunuh!", 1)
+        end
     end
 end
 
--- ============================================
--- FUNGSI SURVIVOR
--- ============================================
+-- Long Kill
+local function longKillSurvivor()
+    if not isKiller then return end
+    local target, dist = getNearestSurvivor()
+    if target and target.Character and dist <= CONFIG.Pembunuh.LongKillRange then
+        target.Character.Humanoid.Health = 0
+        createEffect(target.Character.HumanoidRootPart.Position, "Really red")
+        killCount = killCount + 1
+        killStreak = killStreak + 1
+        updateKillCounter()
+        showBigNotification("💀 LONG KILL!", target.Name .. " terbunuh dari jauh!", 1)
+    end
+end
+
+-- Dash
+local function dashSurvivor()
+    if isKiller then return end
+    local direction = character.HumanoidRootPart.CFrame.LookVector * CONFIG.Survivor.DashDistance
+    character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame + direction
+    createEffect(character.HumanoidRootPart.Position, "Bright cyan")
+    showBigNotification("💨 DASH!", "Melesat!", 0.5)
+end
+
+-- Shield
 local function createShield()
+    if isKiller then return end
     local shield = Instance.new("Part")
     shield.Size = Vector3.new(5, 6, 5)
     shield.Position = character.HumanoidRootPart.Position
@@ -375,102 +708,9 @@ local function createShield()
     weld.C0 = CFrame.new(0, 0, 0)
     weld.Parent = shield
     
+    showBigNotification("🛡️ SHIELD!", "Perisai aktif!", 1)
     task.wait(CONFIG.Survivor.ShieldDuration)
     shield:Destroy()
-end
-
-local function repairGenerator()
-    for _, genData in pairs(generators) do
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local distance = (character.HumanoidRootPart.Position - genData.Object.Position).Magnitude
-            if distance < 10 and not genData.IsFixed then
-                genData.Progress = math.min(genData.Progress + (CONFIG.Survivor.RepairSpeed * 0.2), 100)
-                genData.UI.Size = UDim2.new(genData.Progress / 100, 0, 1, 0)
-                
-                if genData.Progress >= 100 and not genData.IsFixed then
-                    genData.IsFixed = true
-                    genData.Object.BrickColor = BrickColor.new("Bright blue")
-                    genData.Object.Material = Enum.Material.SmoothPlastic
-                    
-                    local sound = Instance.new("Sound")
-                    sound.SoundId = "rbxassetid://9120372812"
-                    sound.Volume = 10
-                    sound.Parent = genData.Object
-                    sound:Play()
-                    
-                    print("⚡ Generator selesai!")
-                    
-                    local allFixed = true
-                    for _, g in pairs(generators) do
-                        if not g.IsFixed then
-                            allFixed = false
-                            break
-                        end
-                    end
-                    
-                    if allFixed then
-                        print("🎉 SELAMAT! Anda MENANG!")
-                        StarterGui:SetCore("SendNotification", {
-                            Title = "🎉 MENANG!",
-                            Text = "Semua generator selesai!",
-                            Duration = 5,
-                        })
-                    end
-                end
-            end
-        end
-    end
-end
-
--- ============================================
--- ESP (WALLHACK)
--- ============================================
-local function setupESP()
-    local function createESP(targetPlayer)
-        if not targetPlayer or not targetPlayer.Character then return end
-        
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Pink"
-        highlight.Adornee = targetPlayer.Character
-        highlight.FillColor = CONFIG.Survivor.ESPColor
-        highlight.FillTransparency = 0.4
-        highlight.OutlineColor = CONFIG.Survivor.ESPColor
-        highlight.OutlineTransparency = 0
-        highlight.Parent = targetPlayer.Character
-        
-        if targetPlayer ~= player then
-            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        end
-        
-        return highlight
-    end
-    
-    local function updateESP()
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= player and p.Character then
-                if not p.Character:FindFirstChild("ESP_Pink") then
-                    createESP(p)
-                end
-            end
-        end
-    end
-    
-    Players.PlayerAdded:Connect(function(p)
-        p.CharacterAdded:Connect(function()
-            task.wait(0.5)
-            createESP(p)
-        end)
-    end)
-    
-    spawn(function()
-        while isGameRunning do
-            updateESP()
-            task.wait(0.5)
-        end
-    end)
-    
-    task.wait(1)
-    updateESP()
 end
 
 -- ============================================
@@ -493,350 +733,4 @@ local function spawnGenerators()
         gen.Position = pos
         gen.Anchored = true
         gen.BrickColor = BrickColor.new("Bright green")
-        gen.Material = Enum.Material.Neon
-        gen.Name = "Generator_" .. i
-        gen.Parent = workspace
-        
-        local genData = {
-            Object = gen,
-            IsFixed = false,
-            Progress = 0,
-        }
-        table.insert(generators, genData)
-        
-        local billboard = Instance.new("BillboardGui")
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.Adornee = gen
-        billboard.Parent = gen
-        
-        local progressBar = Instance.new("Frame")
-        progressBar.Size = UDim2.new(1, 0, 1, 0)
-        progressBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        progressBar.Parent = billboard
-        
-        local progressFill = Instance.new("Frame")
-        progressFill.Size = UDim2.new(0, 0, 1, 0)
-        progressFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        progressFill.Parent = progressBar
-        
-        genData.UI = progressFill
-    end
-end
-
--- ============================================
--- SETUP ROLE
--- ============================================
-local function checkRole()
-    local allPlayers = Players:GetPlayers()
-    if #allPlayers > 0 then
-        killer = allPlayers[1]
-        isKiller = (player == killer)
-    end
-end
-
--- ============================================
--- SETUP KILLER (PC)
--- ============================================
-local function setupKillerPC()
-    if not isKiller then return end
-    
-    print("🔪 Anda adalah PEMBUNUH!")
-    
-    local teleportCooldown = false
-    local killCooldown = false
-    local abilityCooldown = false
-    
-    UserInputService.InputBegan:Connect(function(input)
-        if not isKiller then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            local key = input.KeyCode
-            
-            -- Teleport (T)
-            if key == Enum.KeyCode.T and not teleportCooldown then
-                local target, dist = getNearestSurvivor()
-                if target and target.Character and dist <= CONFIG.Pembunuh.TeleportRange then
-                    character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0, 2, 0)
-                    createEffect(character.HumanoidRootPart.Position, "Bright violet")
-                    teleportCooldown = true
-                    task.wait(CONFIG.Pembunuh.TeleportCooldown)
-                    teleportCooldown = false
-                end
-            end
-            
-            -- Invisible (Q)
-            if key == Enum.KeyCode.Q and not abilityCooldown then
-                toggleInvisible()
-            end
-            
-            -- Speed Boost (E)
-            if key == Enum.KeyCode.E and not abilityCooldown then
-                speedBoost()
-            end
-            
-            -- Clone (F)
-            if key == Enum.KeyCode.F and not abilityCooldown then
-                createClones()
-            end
-        end
-        
-        -- Kill (Klik Kiri)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and not killCooldown then
-            local target, dist = getNearestSurvivor()
-            if target and target.Character and dist <= CONFIG.Pembunuh.KillRange then
-                target.Character.Humanoid.Health = 0
-                createEffect(target.Character.HumanoidRootPart.Position, "Really red")
-                print("💀 " .. target.Name .. " terbunuh!")
-                killCooldown = true
-                task.wait(CONFIG.Pembunuh.KillCooldown)
-                killCooldown = false
-            end
-        end
-        
-        -- Long Kill (Klik Kanan)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 and not killCooldown then
-            local target, dist = getNearestSurvivor()
-            if target and target.Character and dist <= CONFIG.Pembunuh.LongKillRange then
-                target.Character.Humanoid.Health = 0
-                createEffect(target.Character.HumanoidRootPart.Position, "Really red")
-                print("💀💀 " .. target.Name .. " terbunuh (long range)!")
-                killCooldown = true
-                task.wait(CONFIG.Pembunuh.KillCooldown)
-                killCooldown = false
-            end
-        end
-    end)
-end
-
--- ============================================
--- SETUP SURVIVOR (PC)
--- ============================================
-local function setupSurvivorPC()
-    if isKiller then return end
-    
-    print("🏃 Anda adalah SURVIVOR!")
-    
-    setupESP()
-    
-    if CONFIG.Survivor.NoFail then
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-    end
-    
-    local dashCooldown = false
-    local shieldCooldown = false
-    
-    UserInputService.InputBegan:Connect(function(input)
-        if isKiller then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            local key = input.KeyCode
-            
-            -- Dash (Q)
-            if key == Enum.KeyCode.Q and not dashCooldown then
-                local direction = character.HumanoidRootPart.CFrame.LookVector * CONFIG.Survivor.DashDistance
-                character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame + direction
-                createEffect(character.HumanoidRootPart.Position, "Bright cyan")
-                dashCooldown = true
-                task.wait(CONFIG.Survivor.DashCooldown)
-                dashCooldown = false
-            end
-            
-            -- Shield (E)
-            if key == Enum.KeyCode.E and not shieldCooldown then
-                createShield()
-                shieldCooldown = true
-                task.wait(10)
-                shieldCooldown = false
-            end
-        end
-        
-        -- Repair (E - juga untuk HP)
-        if input.KeyCode == Enum.KeyCode.E and not isKiller then
-            repairGenerator()
-        end
-    end)
-end
-
--- ============================================
--- AUTO REPAIR (UNTUK SEMUA PLATFORM)
--- ============================================
-local function autoRepair()
-    if isKiller then return end
-    
-    spawn(function()
-        while isGameRunning do
-            task.wait(0.1)
-            
-            for _, genData in pairs(generators) do
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local distance = (character.HumanoidRootPart.Position - genData.Object.Position).Magnitude
-                    if distance < 10 and not genData.IsFixed then
-                        genData.Progress = math.min(genData.Progress + (CONFIG.Survivor.RepairSpeed * 0.05), 100)
-                        genData.UI.Size = UDim2.new(genData.Progress / 100, 0, 1, 0)
-                        
-                        if genData.Progress >= 100 and not genData.IsFixed then
-                            genData.IsFixed = true
-                            genData.Object.BrickColor = BrickColor.new("Bright blue")
-                            genData.Object.Material = Enum.Material.SmoothPlastic
-                            
-                            local sound = Instance.new("Sound")
-                            sound.SoundId = "rbxassetid://9120372812"
-                            sound.Volume = 10
-                            sound.Parent = genData.Object
-                            sound:Play()
-                            
-                            print("⚡ Generator selesai!")
-                            
-                            local allFixed = true
-                            for _, g in pairs(generators) do
-                                if not g.IsFixed then
-                                    allFixed = false
-                                    break
-                                end
-                            end
-                            
-                            if allFixed then
-                                print("🎉 MENANG!")
-                                StarterGui:SetCore("SendNotification", {
-                                    Title = "🎉 MENANG!",
-                                    Text = "Semua generator selesai!",
-                                    Duration = 5,
-                                })
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- ============================================
--- NOTIFIKASI
--- ============================================
-local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 3,
-    })
-end
-
--- ============================================
--- MAIN EXECUTION
--- ============================================
-print("🚀 Loading Distrik Kekerasan...")
-
--- Deteksi platform
-detectPlatform()
-
--- Spawn generator
-spawnGenerators()
-
--- Cek role
-checkRole()
-
--- Setup berdasarkan role dan platform
-if isKiller then
-    setupKillerPC()
-    showNotification("🔪 PEMBUNUH", "Bunuh semua survivor!", 3)
-else
-    setupSurvivorPC()
-    autoRepair()
-    showNotification("🏃 SURVIVOR", "Selesaikan semua generator!", 3)
-end
-
--- Buat GUI untuk HP
-if isMobile then
-    task.wait(1)
-    createMobileGUI()
-end
-
--- Informasi kontrol
-print("========================================")
-print("🎮 DISTRIK KEKERASAN")
-print("========================================")
-
-if isPC then
-    if isKiller then
-        print("🔪 KONTROL PEMBUNUH (PC):")
-        print("  T = Teleport ke survivor")
-        print("  Q = Invisible (5 detik)")
-        print("  E = Speed Boost")
-        print("  F = Buat Clone")
-        print("  Klik Kiri = Bunuh jarak dekat")
-        print("  Klik Kanan = Bunuh jarak jauh")
-    else
-        print("🏃 KONTROL SURVIVOR (PC):")
-        print("  Q = Dash (lompat jauh)")
-        print("  E = Shield & Repair Generator")
-        print("  [OTOMATIS] = Auto repair generator")
-        print("  [OTOMATIS] = ESP Pink (wallhack)")
-    end
-else
-    if isKiller then
-        print("🔪 KONTROL PEMBUNUH (HP):")
-        print("  🔴 Tombol merah = Bunuh")
-        print("  ⚡T = Teleport")
-        print("  👻Q = Invisible")
-        print("  💨E = Speed Boost")
-        print("  👥F = Clone")
-        print("  💀 = Bunuh jarak jauh")
-    else
-        print("🏃 KONTROL SURVIVOR (HP):")
-        print("  💨Q = Dash")
-        print("  🛡️E = Shield")
-        print("  🔧 = Repair Generator")
-        print("  [OTOMATIS] = Auto repair")
-        print("  [OTOMATIS] = ESP Pink")
-    end
-end
-print("========================================")
-
--- Cleanup saat player respawn
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    humanoid = character:WaitForChild("Humanoid")
-    task.wait(0.5)
-    
-    if isKiller then
-        setupKillerPC()
-    else
-        setupSurvivorPC()
-        autoRepair()
-    end
-    
-    -- Recreate GUI untuk HP
-    if isMobile then
-        task.wait(1)
-        createMobileGUI()
-    end
-end)
-
-print("✅ Script berhasil dijalankan!")
-print("📱 Platform: " .. (isPC and "PC" or "HP"))
-
--- ============================================
--- COMMAND UNTUK TOGGLE FITUR
--- ============================================
-local function setupCommands()
-    _G.Distrik = {
-        ToggleESP = function()
-            CONFIG.Survivor.Wallhack = not CONFIG.Survivor.Wallhack
-            print("ESP: " .. (CONFIG.Survivor.Wallhack and "ON" or "OFF"))
-        end,
-        ToggleAutoRepair = function()
-            -- Auto repair sudah berjalan
-            print("Auto repair selalu aktif untuk survivor!")
-        end,
-        GetGenerators = function()
-            local fixed = 0
-            for _, g in pairs(generators) do
-                if g.IsFixed then fixed = fixed + 1 end
-            end
-            print("Generator: " .. fixed .. "/" .. #generators .. " selesai")
-        end
-    }
-    
-    print("💡 Gunakan _G.Distrik.ToggleESP() untuk toggle ESP")
-end
-
-setupCommands()
+        gen.Material = Enum
