@@ -342,7 +342,7 @@ screenGui.Enabled = true
 
 -- Frame utama dengan posisi tengah dan ukuran sedang
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 600)  -- Ukuran sedang
+mainFrame.Size = UDim2.new(0, 300, 0, 400)  -- Ukuran kecil
 mainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)  -- Posisi tengah
 mainFrame.BackgroundColor3 = Color3.fromRGB(10, 5, 20)
 mainFrame.BackgroundTransparency = 0.05
@@ -402,7 +402,7 @@ end)
 
 -- Header premium
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 50)
+header.Size = UDim2.new(1, 0, 0, 40)
 header.BackgroundColor3 = Color3.fromRGB(139, 0, 255)
 header.Parent = mainFrame
 
@@ -413,13 +413,13 @@ title.BackgroundTransparency = 1
 title.Text = "✨ ZEXSPARK PREMIUM ✨"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 14
+title.TextSize = 12
 title.Parent = header
 
 -- Premium badge
 local premiumBadge = Instance.new("Frame")
-premiumBadge.Size = UDim2.new(0, 50, 0, 20)
-premiumBadge.Position = UDim2.new(1, -55, 0.5, -10)
+premiumBadge.Size = UDim2.new(0, 45, 0, 18)
+premiumBadge.Position = UDim2.new(1, -50, 0.5, -9)
 premiumBadge.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 premiumBadge.BackgroundTransparency = 0.2
 premiumBadge.Parent = header
@@ -435,13 +435,13 @@ badgeText.Parent = premiumBadge
 
 -- Close button premium
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -40, 0, 8)
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
 closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 18
+closeBtn.TextSize = 16
 closeBtn.Parent = header
 closeBtn.MouseButton1Click:Connect(function()
     TweenService:Create(screenGui, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
@@ -451,26 +451,26 @@ end)
 
 -- Scroll frame
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -15, 1, -55)
-scroll.Position = UDim2.new(0, 8, 0, 53)
+scroll.Size = UDim2.new(1, -10, 1, -45)
+scroll.Position = UDim2.new(0, 5, 0, 43)
 scroll.BackgroundTransparency = 1
-scroll.CanvasSize = UDim2.new(0, 0, 0, 1600)
-scroll.ScrollBarThickness = 5
+scroll.CanvasSize = UDim2.new(0, 0, 0, 1200)
+scroll.ScrollBarThickness = 4
 scroll.Parent = mainFrame
 
 local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 6)
+layout.Padding = UDim.new(0, 5)
 layout.Parent = scroll
 
 -- Fungsi untuk membuat BUTTON PREMIUM
 function createPremiumButton(text, callback, color)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -15, 0, 35)
+    btn.Size = UDim2.new(1, -10, 0, 28)
     btn.BackgroundColor3 = color or Color3.fromRGB(200, 50, 50)
     btn.Text = "💎 " .. text .. " 💎"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
+    btn.TextSize = 10
     btn.Parent = scroll
     
     btn.MouseEnter:Connect(function()
@@ -495,7 +495,7 @@ end
 -- Fungsi toggle premium
 function createPremiumToggle(text, setting, color)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -15, 0, 34)
+    frame.Size = UDim2.new(1, -10, 0, 28)
     frame.BackgroundColor3 = Color3.fromRGB(25, 20, 40)
     frame.BackgroundTransparency = 0.4
     frame.Parent = scroll
@@ -507,17 +507,17 @@ function createPremiumToggle(text, setting, color)
     label.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.Gotham
-    label.TextSize = 12
+    label.TextSize = 10
     label.Parent = frame
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 70, 0, 26)
-    btn.Position = UDim2.new(1, -75, 0.5, -13)
+    btn.Size = UDim2.new(0, 55, 0, 20)
+    btn.Position = UDim2.new(1, -60, 0.5, -10)
     btn.BackgroundColor3 = Settings[setting] and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
     btn.Text = Settings[setting] and "ON ✓" or "OFF ✗"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
+    btn.TextSize = 9
     btn.Parent = frame
     
     btn.MouseEnter:Connect(function()
@@ -557,7 +557,7 @@ end
 
 function createPremiumSlider(labelText, setting, minVal, maxVal, currentVal, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -15, 0, 45)
+    frame.Size = UDim2.new(1, -10, 0, 40)
     frame.BackgroundColor3 = Color3.fromRGB(25, 20, 40)
     frame.BackgroundTransparency = 0.4
     frame.Parent = scroll
@@ -568,12 +568,12 @@ function createPremiumSlider(labelText, setting, minVal, maxVal, currentVal, cal
     label.Text = "📊 " .. labelText .. ": " .. currentVal
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.Font = Enum.Font.Gotham
-    label.TextSize = 11
+    label.TextSize = 9
     label.Parent = frame
     
     local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(0, 220, 0, 18)
-    sliderBtn.Position = UDim2.new(0.5, -110, 0.7, -9)
+    sliderBtn.Size = UDim2.new(0, 180, 0, 16)
+    sliderBtn.Position = UDim2.new(0.5, -90, 0.7, -8)
     sliderBtn.BackgroundColor3 = Color3.fromRGB(60, 50, 80)
     sliderBtn.Text = ""
     sliderBtn.Parent = frame
@@ -611,7 +611,7 @@ end
 
 function addPremiumSection(title, color)
     local section = Instance.new("Frame")
-    section.Size = UDim2.new(1, -15, 0, 28)
+    section.Size = UDim2.new(1, -10, 0, 22)
     section.BackgroundColor3 = color or Color3.fromRGB(139, 0, 255)
     section.BackgroundTransparency = 0.2
     section.Parent = scroll
